@@ -1,8 +1,11 @@
+import torch
 import gymnasium as gym
 import gymnasium_robotics
 from gym_robotics_custom import MazeObservationWrapper, MazeRewardWrapper
 
 gym.register_envs(gymnasium_robotics)
+DEVICE = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+
 
 maze = [[1, 1, 1, 1, 1],
         [1, 0, 0, 0, 1],
@@ -12,6 +15,7 @@ env = gym.make('PointMaze_Large_Diverse_GR-v3',render_mode = "RGB", maze_map = m
 
 wrapped_env = MazeObservationWrapper(env)
 wrapped_env = MazeRewardWrapper(wrapped_env)
+
 # Reset the environment to generate the first observation
 observation, info = wrapped_env.reset(seed=42)
 
@@ -25,4 +29,3 @@ while not episode_over:
     episode_over = terminated or truncated
 
 env.close()
-print(episode_len)
