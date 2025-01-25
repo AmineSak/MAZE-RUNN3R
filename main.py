@@ -1,23 +1,25 @@
 import gymnasium as gym
 import gymnasium_robotics
-from gym_robotics_custom import MazeObservationWrapper
+from gym_robotics_custom import MazeObservationWrapper, MazeRewardWrapper
 
 gym.register_envs(gymnasium_robotics)
 
-example_map = [[1, 1, 1, 1, 1],
-               [1, 0, 0, 0, 1],
-               [1, 1, 0, 1, 1],
-               [1, 0, 0, 0, 1],
-               [1, 1, 1, 1, 1]]
+maze = [[1, 1, 1, 1, 1],
+        [1, 0, 0, 0, 1],
+        [1, 1, 1, 1, 1]]
 
-env = gym.make('PointMaze_UMaze-v3',render_mode = "human",maze_map=example_map)
+env = gym.make('PointMaze_Large_Diverse_GR-v3',render_mode = "human", maze_map = maze)
 
 wrapped_env = MazeObservationWrapper(env)
+wrapped_env = MazeRewardWrapper(wrapped_env)
 # Reset the environment to generate the first observation
 observation, info = wrapped_env.reset(seed=42)
 
-for _ in range(1000):
+episode_over = False
+while not episode_over:
     action = wrapped_env.action_space.sample()
-    wrapped_env.step(action)
+    observation, reward, terminated, truncated, info  = wrapped_env.step(action)
+    print("reward", reward)
+    episode_over = terminated or truncated
 
-print(observation)
+env.close()
