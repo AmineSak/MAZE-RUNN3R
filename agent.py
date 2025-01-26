@@ -15,8 +15,8 @@ class Agent:
                  batch_size=64,
                  n_epochs = 10,
                  policy_clip=0.2,
-                 value_loss_coeff = 1.3,
-                 entropy_loss_coeff = 0.1,
+                 value_loss_coeff = 1.5,
+                 entropy_loss_coeff = 0.3,
                  load_existing=False):
         self.obs_size = observation_space_size
         self.act_size = action_space_size
