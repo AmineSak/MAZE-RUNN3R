@@ -2,6 +2,9 @@ import torch
 import gymnasium as gym
 import gymnasium_robotics
 from gym_robotics_custom import MazeObservationWrapper, MazeRewardWrapper
+from agent import Agent
+import numpy as np
+import matplotlib.pyplot as plt
 
 gym.register_envs(gymnasium_robotics)
 DEVICE = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
@@ -10,22 +13,69 @@ DEVICE = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 maze = [[1, 1, 1, 1, 1],
         [1, 0, 0, 0, 1],
         [1, 1, 1, 1, 1]]
-
-env = gym.make('PointMaze_Large_Diverse_GR-v3',render_mode = "RGB", maze_map = maze)
+env = gym.make('PointMaze_Large_Diverse_GR-v3', render_mode="human", maze_map = maze)
 
 wrapped_env = MazeObservationWrapper(env)
 wrapped_env = MazeRewardWrapper(wrapped_env)
 
-# Reset the environment to generate the first observation
-observation, info = wrapped_env.reset(seed=42)
 
-episode_over = False
-episode_len = 0
-while not episode_over:
-    episode_len += 1 
-    action = wrapped_env.action_space.sample()
-    observation, reward, terminated, truncated, info  = wrapped_env.step(action)
-    print("reward", reward)
-    episode_over = terminated or truncated
 
-env.close()
+# Agent Initialization
+horizon = 20
+batch_size = 10
+n_epochs = 10
+lr = 0.0003
+agent = Agent(observation_space_size=6, action_space_size=2,lr=lr,n_epochs=n_epochs)
+
+n_games = 100
+train_iters = 0
+best_score = -float("inf")
+score_history = []
+avg_score = 0
+n_steps = 0
+
+
+for i in range(n_games):
+    # Reset the environment to generate the first observation
+    observation, _ = wrapped_env.reset()
+    done = False
+    score = 0
+    while not done:
+        action, prob, val = agent.choose_action(observation)
+
+        observation_, reward, _, _, info = wrapped_env.step(action)
+
+        print(f"Info: {info}")
+    
+        done =  info["success"]
+        score += reward
+        n_steps += 1
+        agent.memorize(observation, action, prob, reward, done, val)
+        
+    
+        if n_steps % horizon == 0:
+            agent.train()
+            train_iters += 1
+        observation = observation_
+    score_history.append(score)
+    avg_score = np.mean(score_history[-5:])
+    
+    if avg_score > best_score:
+        best_score = avg_score
+    
+    print(f"episode {i}", "score %.1f" %score, "avg score %.1f" %avg_score)
+    
+def plot_results(score_history):
+    plt.figure(figsize=(12, 6))
+    plt.plot(score_history, label='Score per Episode', color='blue')
+    plt.title('PPO Training Performance')
+    plt.xlabel('Episode')
+    plt.ylabel('Score')
+    plt.axhline(y=np.mean(score_history[-5:]), color='red', linestyle='--', label='Average Score (last 5 episodes)')
+    plt.legend()
+    plt.grid()
+    plt.show()
+
+# Call the visualization function after training
+plot_results(score_history)
+
