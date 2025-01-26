@@ -15,7 +15,7 @@ maze = [[1, 1, 1, 1, 1],
         [1, 1, 1, 0, 1],
         [1, 0, 0, 0, 1],
         [1, 1, 1, 1, 1]]
-env = gym.make('PointMaze_UMaze-v3',maze_map = maze,max_episode_steps=1000)
+env = gym.make('PointMaze_UMaze-v3',maze_map = maze,max_episode_steps=500,render_mode="human")
 
 wrapped_env = MazeObservationWrapper(env)
 wrapped_env = MazeRewardWrapper(wrapped_env)
@@ -44,9 +44,9 @@ for i in range(n_games):
     while not done:
         action, prob, val = agent.choose_action(observation)
 
-        observation_, reward, _, _, info = wrapped_env.step(action)
+        observation_, reward, _, truncated, info = wrapped_env.step(action)
     
-        done =  info["success"]
+        done =  info["success"] or truncated
         score += reward
         n_steps += 1
         agent.memorize(observation, action, prob, reward, done, val)
