@@ -1,7 +1,78 @@
 import torch
 import torch.nn as nn
 import numpy as np
+import os
 
+
+class ActorCriticNetwork(nn.Module):
+    def __init__(self, observation_space_size, action_space_size,chkpt_dir='tmp/ppo'):
+        """Initialize the PPO neural network model with shared layers for policy and value functions.
+        
+        Args:
+            observation_space_size (int): Dimension of the observation/state space
+            action_space_size (int): Dimension of the action space
+            
+        The network architecture consists of:
+        - Shared layers: Two fully connected layers (obs_size → 32 → 32)
+        - Policy head: Two fully connected layers with tanh activation (32 → 32 → action_size)
+        - Value head: Two fully connected layers (32 → 32 → 1)
+        """
+        super().__init__()
+        self.checkpoint_file = os.path.join(chkpt_dir,"actor_critic_nn")
+        
+        self.shared_layers = nn.Sequential(
+            nn.Linear(observation_space_size,264),
+            nn.ReLU(),
+            nn.Linear(264,264),
+            nn.ReLU()
+        )
+        
+        # Policy layers for mean and standard deviation
+        self.policy_layers = nn.Sequential(
+            nn.Linear(264, 264),
+            nn.ReLU(),
+            nn.Linear(264, action_space_size),  # Mean for each action dimension
+        )
+        
+        self.std_layers = nn.Sequential(
+            nn.Linear(264, 264),
+            nn.ReLU(),
+            nn.Linear(264, action_space_size),  # Std dev for each action dimension
+            nn.Softplus()  # Ensure positive standard deviation
+        )
+        
+        # Value function layers
+        self.value_layers = nn.Sequential(
+            nn.Linear(264, 264),
+            nn.ReLU(),
+            nn.Linear(264, 1)  # Output the value estimate
+        )
+        
+        self.device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+        self.to(self.device)
+
+    def value(self, observation):
+        z = self.shared_layers(observation)
+        value = self.value_layers(z) 
+        return value
+    
+    def policy(self, observation):
+        z = self.shared_layers(observation)
+        mean = self.policy_layers(z)  # Mean output
+        std = self.std_layers(z)      # Std dev output
+        return mean, std  # Return mean and std for the normal distribution
+    
+    def forward(self,observation):
+        mean, std = self.policy(observation)
+        value = self.value(observation)
+        return mean, std, value
+    
+    def save_checkpoint(self):
+        torch.save(self.state_dict(), self.checkpoint_file)
+
+    def load_checkpoint(self):
+        self.load_state_dict(torch.load(self.checkpoint_file))
+    
 class PPOMemory:
     """A memory buffer for storing and processing PPO training data.
     
@@ -78,69 +149,3 @@ class PPOMemory:
         self.dones = []
         self.actions = []
         self.log_probs = []
-
-class ActorCriticNetwork(nn.Module):
-    def __init__(self, observation_space_size, action_space_size):
-        """Initialize the PPO neural network model with shared layers for policy and value functions.
-        
-        Args:
-            observation_space_size (int): Dimension of the observation/state space
-            action_space_size (int): Dimension of the action space
-            
-        The network architecture consists of:
-        - Shared layers: Two fully connected layers (obs_size → 32 → 32)
-        - Policy head: Two fully connected layers with tanh activation (32 → 32 → action_size)
-        - Value head: Two fully connected layers (32 → 32 → 1)
-        """
-        super().__init__()
-        
-        self.shared_layers = nn.Sequential(
-            nn.Linear(observation_space_size,264),
-            nn.ReLU(),
-            nn.Linear(264,264),
-            nn.ReLU()
-        )
-        
-        # Policy layers for mean and standard deviation
-        self.policy_layers = nn.Sequential(
-            nn.Linear(264, 264),
-            nn.ReLU(),
-            nn.Linear(264, action_space_size),  # Mean for each action dimension
-        )
-        
-        self.std_layers = nn.Sequential(
-            nn.Linear(264, 264),
-            nn.ReLU(),
-            nn.Linear(264, action_space_size),  # Std dev for each action dimension
-            nn.Softplus()  # Ensure positive standard deviation
-        )
-        
-        # Value function layers
-        self.value_layers = nn.Sequential(
-            nn.Linear(264, 264),
-            nn.ReLU(),
-            nn.Linear(264, 1)  # Output the value estimate
-        )
-        
-        self.device = torch.device("mps:0" if torch.backends.mps.is_available() else "cpu")
-        self.to(self.device)
-
-    def value(self, observation):
-        z = self.shared_layers(observation)
-        value = self.value_layers(z) 
-        return value
-    
-    def policy(self, observation):
-        z = self.shared_layers(observation)
-        mean = self.policy_layers(z)  # Mean output
-        std = self.std_layers(z)      # Std dev output
-        return mean, std  # Return mean and std for the normal distribution
-    
-    def forward(self,observation):
-        mean, std = self.policy(observation)
-        value = self.value(observation)
-        return mean, std, value
-    
-
-        
-        

@@ -5,15 +5,17 @@ from gym_robotics_custom import MazeObservationWrapper, MazeRewardWrapper
 from agent import Agent
 import numpy as np
 import matplotlib.pyplot as plt
+import time
 
 gym.register_envs(gymnasium_robotics)
-DEVICE = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 
 
 maze = [[1, 1, 1, 1, 1],
         [1, 0, 0, 0, 1],
+        [1, 1, 1, 0, 1],
+        [1, 0, 0, 0, 1],
         [1, 1, 1, 1, 1]]
-env = gym.make('PointMaze_Large_Diverse_GR-v3', render_mode="human", maze_map = maze)
+env = gym.make('PointMaze_Large_Diverse_GR-v3',render_mode='human', maze_map = maze)
 
 wrapped_env = MazeObservationWrapper(env)
 wrapped_env = MazeRewardWrapper(wrapped_env)
@@ -27,14 +29,14 @@ n_epochs = 10
 lr = 0.0003
 agent = Agent(observation_space_size=6, action_space_size=2,lr=lr,n_epochs=n_epochs)
 
-n_games = 100
+n_games = 300
 train_iters = 0
 best_score = -float("inf")
 score_history = []
 avg_score = 0
 n_steps = 0
 
-
+tic = time.time()
 for i in range(n_games):
     # Reset the environment to generate the first observation
     observation, _ = wrapped_env.reset()
@@ -44,15 +46,12 @@ for i in range(n_games):
         action, prob, val = agent.choose_action(observation)
 
         observation_, reward, _, _, info = wrapped_env.step(action)
-
-        print(f"Info: {info}")
     
         done =  info["success"]
         score += reward
         n_steps += 1
         agent.memorize(observation, action, prob, reward, done, val)
         
-    
         if n_steps % horizon == 0:
             agent.train()
             train_iters += 1
@@ -62,8 +61,11 @@ for i in range(n_games):
     
     if avg_score > best_score:
         best_score = avg_score
+        agent.save_model()
     
     print(f"episode {i}", "score %.1f" %score, "avg score %.1f" %avg_score)
+toc = time.time()
+print("Time gpu", toc-tic)
     
 def plot_results(score_history):
     plt.figure(figsize=(12, 6))

@@ -15,7 +15,7 @@ class Agent:
                  n_epochs = 10,
                  policy_clip=0.2,
                  value_loss_coeff = 1,
-                 entropy_loss_coeff = 0.1,
+                 entropy_loss_coeff = 0.3,
                  ):
         self.obs_size = observation_space_size
         self.act_size = action_space_size
@@ -40,6 +40,14 @@ class Agent:
     
     def memorize(self,obs, act, log_prob, rew, done, val):
         self.memory.store_memory(obs, act, log_prob, rew, done, val)
+        
+    def save_model(self):
+        print('... saving model ...')
+        self.actor_critic_model.save_checkpoint()
+
+    def load_model(self):
+        print('... loading model ...')
+        self.actor_critic_model.load_checkpoint()
     
     def choose_action(self, obs):
         obs = torch.tensor(obs, dtype=torch.float32).to(self.actor_critic_model.device)
@@ -69,10 +77,12 @@ class Agent:
             gaes = [deltas[-1]]
             for t in reversed(range(len(deltas) - 1)):
                 gaes.append(deltas[t] + self.gamma*self.gae_lambda*gaes[-1])
+            gaes = np.array(gaes[::-1], dtype=np.float32)
+            gaes = torch.from_numpy(gaes).to(self.actor_critic_model.device)
             
-            gaes = torch.tensor(gaes[::-1],dtype=torch.float32).to(self.actor_critic_model.device)
-            
-            vals = torch.tensor(values,dtype=torch.float32).to(self.actor_critic_model.device)
+            # Convert values list to numpy array first
+            vals = np.array(values, dtype=np.float32)
+            vals = torch.from_numpy(vals).to(self.actor_critic_model.device)
             for batch in batches:
                 obss_ = torch.tensor(obss[batch], dtype=torch.float32).to(self.actor_critic_model.device)
                 old_log_probs_ = torch.tensor(old_log_probs[batch]).to(self.actor_critic_model.device)
