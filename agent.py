@@ -16,10 +16,15 @@ class Agent:
                  policy_clip=0.2,
                  value_loss_coeff = 1,
                  entropy_loss_coeff = 0.3,
-                 ):
+                 load_existing=False):
         self.obs_size = observation_space_size
         self.act_size = action_space_size
         self.actor_critic_model = ActorCriticNetwork(self.obs_size,self.act_size)
+        
+        # Load existing model if specified
+        if load_existing:
+            self.load_model()
+        
         self.lr = lr
         self.gamma = gamma
         self.gae_lambda = gae_lambda

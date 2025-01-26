@@ -27,7 +27,7 @@ horizon = 20
 batch_size = 10
 n_epochs = 10
 lr = 0.0003
-agent = Agent(observation_space_size=6, action_space_size=2,lr=lr,n_epochs=n_epochs)
+agent = Agent(observation_space_size=6, action_space_size=2,lr=lr,n_epochs=n_epochs,load_existing=True)
 
 n_games = 300
 train_iters = 0
