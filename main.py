@@ -31,6 +31,7 @@ best_score = -float("inf")
 score_history = []
 avg_score = 0
 n_steps = 0
+window_size = 50
 
 tic = time.time()
 for i in range(n_games):
@@ -52,7 +53,7 @@ for i in range(n_games):
             agent.train()
         observation = observation_
     score_history.append(score + MAX_STEPS)
-    avg_score = np.mean(score_history[-5:])
+    avg_score = np.mean(score_history[-window_size:])
     
     if avg_score > best_score:
         best_score = avg_score

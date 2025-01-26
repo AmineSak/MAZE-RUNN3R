@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import os 
 import numpy as np
 
-def plot_results(score_history, hyperparams, save_dir='training_results'):
+def plot_results(score_history,window_size, hyperparams, save_dir='training_results'):
     # Create directory with timestamp
     timestamp = time.strftime("%Y%m%d-%H%M%S")
     save_path = f"{save_dir}/{timestamp}"
@@ -15,8 +15,8 @@ def plot_results(score_history, hyperparams, save_dir='training_results'):
     plt.title('PPO Training Performance')
     plt.xlabel('Episode')
     plt.ylabel('Score')
-    plt.axhline(y=np.mean(score_history[-5:]), color='red', linestyle='--', 
-                label=f'Average Score (last 5 episodes): {np.mean(score_history[-5:]):.1f}')
+    plt.axhline(y=np.mean(score_history[-window_size:]), color='red', linestyle='--', 
+                label=f'Average Score (last {window_size} episodes): {np.mean(score_history[-window_size:]):.1f}')
     
     # Add hyperparameter annotations
     hyperparam_text = '\n'.join([f'{k}: {v}' for k, v in hyperparams.items()])
