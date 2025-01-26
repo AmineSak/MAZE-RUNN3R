@@ -15,7 +15,7 @@ maze = [[1, 1, 1, 1, 1],
         [1, 1, 1, 0, 1],
         [1, 0, 0, 0, 1],
         [1, 1, 1, 1, 1]]
-env = gym.make('PointMaze_UMaze-v3',maze_map = maze)
+env = gym.make('PointMaze_UMaze-v3',maze_map = maze,max_episode_steps=1000)
 
 wrapped_env = MazeObservationWrapper(env)
 wrapped_env = MazeRewardWrapper(wrapped_env)
