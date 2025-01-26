@@ -15,7 +15,7 @@ maze = [[1, 1, 1, 1, 1],
         [1, 1, 1, 0, 1],
         [1, 0, 0, 0, 1],
         [1, 1, 1, 1, 1]]
-env = gym.make('PointMaze_Large_Diverse_GR-v3',render_mode='human', maze_map = maze)
+env = gym.make('PointMaze_UMaze-v3',maze_map = maze)
 
 wrapped_env = MazeObservationWrapper(env)
 wrapped_env = MazeRewardWrapper(wrapped_env)
@@ -23,8 +23,7 @@ wrapped_env = MazeRewardWrapper(wrapped_env)
 
 
 # Agent Initialization
-horizon = 20
-batch_size = 10
+horizon = 30
 n_epochs = 10
 lr = 0.0003
 agent = Agent(observation_space_size=6, action_space_size=2,lr=lr,n_epochs=n_epochs,load_existing=True)
@@ -39,7 +38,7 @@ n_steps = 0
 tic = time.time()
 for i in range(n_games):
     # Reset the environment to generate the first observation
-    observation, _ = wrapped_env.reset()
+    observation, _ = wrapped_env.reset(options={"goal_cell": (3,1), "reset_cell": (1,1)})
     done = False
     score = 0
     while not done:

@@ -2,6 +2,7 @@ import torch
 import torch.optim as optim
 from ppo_model import ActorCriticNetwork, PPOMemory
 import numpy as np
+import os 
 
 
 class Agent:
@@ -14,15 +15,15 @@ class Agent:
                  batch_size=64,
                  n_epochs = 10,
                  policy_clip=0.2,
-                 value_loss_coeff = 1,
-                 entropy_loss_coeff = 0.3,
+                 value_loss_coeff = 1.3,
+                 entropy_loss_coeff = 0.1,
                  load_existing=False):
         self.obs_size = observation_space_size
         self.act_size = action_space_size
         self.actor_critic_model = ActorCriticNetwork(self.obs_size,self.act_size)
         
         # Load existing model if specified
-        if load_existing:
+        if load_existing and os.path.exists(self.actor_critic_model.checkpoint_file):
             self.load_model()
         
         self.lr = lr
