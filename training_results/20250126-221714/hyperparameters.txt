@@ -1,7 +1,0 @@
-horizon: 30
-n_epochs: 10
-learning_rate: 0.0003
-n_games: 300
-max_steps: 500
-c1: 1.5
-c2: 0.3

@@ -15,8 +15,8 @@ class Agent:
                  batch_size=64,
                  n_epochs = 10,
                  policy_clip=0.2,
-                 value_loss_coeff = 1.5,
-                 entropy_loss_coeff = 0.3,
+                 value_loss_coeff = 0.5,
+                 entropy_loss_coeff = 0.01,
                  load_existing=False):
         self.obs_size = observation_space_size
         self.act_size = action_space_size
@@ -42,6 +42,11 @@ class Agent:
         self.optimizer = optim.Adam(self.actor_critic_model.parameters(),lr = self.lr)
         
         self.memory = PPOMemory(batch_size)
+        
+        self.policy_loss = float('inf')
+        self.value_loss = float('inf')
+        self.entropy_loss = float('inf')
+        self.total_loss = float('inf')
         
     
     def memorize(self,obs, act, log_prob, rew, done, val):
@@ -107,20 +112,28 @@ class Agent:
                     1 + self.policy_clip) * gaes[batch]
                 
                 policy_loss = - torch.min(weighted_log_probs,clamped_log_probs).mean()
+                self.policy_loss = policy_loss
                 
                 returns = gaes[batch] + vals
                 value_loss = (returns - new_vals)**2
                 value_loss = value_loss.mean()
+                self.value_loss = value_loss
                 
                 entropy_loss = dist.entropy().sum(dim=-1)
                 entropy_loss = entropy_loss.mean()
+                self.entropy_loss = entropy_loss
                 
                 total_loss = policy_loss + self.value_loss_coeff * value_loss - self.entropy_loss_coeff * entropy_loss
+                self.total_loss = total_loss
                 
                 self.optimizer.zero_grad()
                 total_loss.backward()
                 self.optimizer.step()
         self.memory.clear_memory()
+        return self.total_loss,\
+                self.policy_loss,\
+                self.value_loss,\
+                self.entropy_loss
                 
                 
                 
