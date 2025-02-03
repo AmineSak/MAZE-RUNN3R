@@ -1,72 +1,75 @@
 import torch
 import torch.nn as nn
+from torch.utils.data import DataLoader, TensorDataset
+import torch.nn.functional as F
 import numpy as np
 import os
 
 
-class ActorCriticNetwork(nn.Module):
-    def __init__(self, observation_space_size, action_space_size,chkpt_dir='tmp/ppo'):
-        """Initialize the PPO neural network model with shared layers for policy and value functions.
-        
-        Args:
-            observation_space_size (int): Dimension of the observation/state space
-            action_space_size (int): Dimension of the action space
-            
-        The network architecture consists of:
-        - Shared layers: Two fully connected layers (obs_size → 32 → 32)
-        - Policy head: Two fully connected layers with tanh activation (32 → 32 → action_size)
-        - Value head: Two fully connected layers (32 → 32 → 1)
-        """
+class ActorNN(nn.Module):
+    def __init__(self,observation_space_size, action_space_size,h_size=264,chkpt_dir="checkpoints/ppo"):
         super().__init__()
-        self.checkpoint_file = os.path.join(chkpt_dir,"actor_critic_nn")
+        self.checkpoint_file = os.path.join(chkpt_dir,"actor")
         
-        self.shared_layers = nn.Sequential(
-            nn.Linear(observation_space_size,264),
-            nn.ReLU(),
-            nn.Linear(264,264),
-            nn.ReLU()
-        )
+        self.fc1 = nn.Linear(observation_space_size,h_size)
+        self.fc2 = nn.Linear(h_size,h_size)
+        self.fc3 = nn.Linear(h_size,h_size)
+        self.fc_mean = nn.Linear(h_size,action_space_size)
         
-        # Policy layers for mean and standard deviation
-        self.policy_layers = nn.Sequential(
-            nn.Linear(264, 264),
-            nn.ReLU(),
-            nn.Linear(264, action_space_size),  # Mean for each action dimension
-        )
+        self.log_std = nn.Parameter(torch.zeros(action_space_size))
         
-        self.std_layers = nn.Sequential(
-            nn.Linear(264, 264),
-            nn.ReLU(),
-            nn.Linear(264, action_space_size),  # Std dev for each action dimension
-            nn.Softplus()  # Ensure positive standard deviation
-        )
-        
-        # Value function layers
-        self.value_layers = nn.Sequential(
-            nn.Linear(264, 264),
-            nn.ReLU(),
-            nn.Linear(264, 1)  # Output the value estimate
-        )
+        self._initialize_weights()
         
         self.device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
         self.to(self.device)
-
-    def value(self, observation):
-        z = self.shared_layers(observation)
-        value = self.value_layers(z) 
-        return value
-    
-    def policy(self, observation):
-        z = self.shared_layers(observation)
-        mean = self.policy_layers(z)  # Mean output
-        std = self.std_layers(z)      # Std dev output
-        return mean, std  # Return mean and std for the normal distribution
     
     def forward(self,observation):
-        mean, std = self.policy(observation)
-        value = self.value(observation)
-        return mean, std, value
+        x = F.tanh(self.fc1(observation))
+        x = F.tanh(self.fc2(x))
+        x = F.tanh(self.fc3(x))
+        mean = self.fc_mean(x)
+        std = torch.exp(self.log_std)
+        return mean,std
     
+    def _initialize_weights(self):
+        for layer in [self.fc1, self.fc2, self.fc3, self.fc_mean]:
+            nn.init.xavier_uniform_(layer.weight)
+            nn.init.zeros_(layer.bias)
+    
+    def save_checkpoint(self):
+        torch.save(self.state_dict(), self.checkpoint_file)
+
+    def load_checkpoint(self):
+        self.load_state_dict(torch.load(self.checkpoint_file))
+    
+
+class CriticNN(nn.Module):
+    def __init__(self,observation_space_size,h_size=264,chkpt_dir="checkpoints/ppo"):
+        super().__init__()
+        self.checkpoint_file = os.path.join(chkpt_dir,"critic")
+        
+        self.fc1 = nn.Linear(observation_space_size,h_size)
+        self.fc2 = nn.Linear(h_size,h_size)
+        self.fc3 = nn.Linear(h_size,h_size)
+        self.fc_value = nn.Linear(h_size,1)
+        
+        self._initialize_weights()
+        
+        self.device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+        self.to(self.device)
+    
+    def forward(self,observation):
+        x = F.tanh(self.fc1(observation))
+        x = F.tanh(self.fc2(x))
+        x = F.tanh(self.fc3(x))
+        value = self.fc_value(x)
+        return value
+    
+    def _initialize_weights(self):
+        for layer in [self.fc1, self.fc2, self.fc3, self.fc_value]:
+            nn.init.xavier_uniform_(layer.weight)
+            nn.init.zeros_(layer.bias)
+            
     def save_checkpoint(self):
         torch.save(self.state_dict(), self.checkpoint_file)
 

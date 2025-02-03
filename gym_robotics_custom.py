@@ -17,6 +17,6 @@ class MazeRewardWrapper(RewardWrapper):
     def __init__(self, env: Env):
         super().__init__(env)
     
-    def reward(self, base_reward ):
+    def reward(self, base_reward):
         return  -1 if base_reward == 0 else 1
         
