@@ -6,10 +6,10 @@ import gymnasium_robotics
 import numpy as np
 import torch as T
 import torch.nn as nn
-import wandb
 from torch.distributions.normal import Normal
 from torch.utils.tensorboard import SummaryWriter
 
+import wandb
 from gym_robotics_custom import MazeObservationWrapper
 from utils import *
 
@@ -242,9 +242,9 @@ def train(
 
 if __name__ == "__main__":
     train(
-        env_id="PointMaze_Medium-v3",
+        env_id="PointMaze_MediumDense-v3",
         num_actors=8,
         time_steps=2000000,
         max_steps_per_episode=1500,
-        exp_name="Maze_sparse_reward",
+        exp_name="Maze_dense_reward",
     )
